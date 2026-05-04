@@ -225,36 +225,36 @@ services:
     stdin_open: true
     tty: true
 
-  # ── go-service (stub) ─────────────────────────────────────────────────────
-  go-service:
-    build:
-      context: ./services/go-service
-      dockerfile: Dockerfile
-    image: ${GO_SERVICE_IMAGE:-auto-agents/go-service:local}
-    container_name: go-service
-    restart: unless-stopped
-    environment:
-      GO_SERVICE_PORT: "${GO_SERVICE_PORT:-8080}"
-    ports:
-      - "${GO_SERVICE_PORT:-8080}:8080"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+  # # ── go-service (stub) ─────────────────────────────────────────────────────
+  # go-service:
+  #   build:
+  #     context: ./services/go-service
+  #     dockerfile: Dockerfile
+  #   image: ${GO_SERVICE_IMAGE:-auto-agents/go-service:local}
+  #   container_name: go-service
+  #   restart: unless-stopped
+  #   environment:
+  #     GO_SERVICE_PORT: "${GO_SERVICE_PORT:-8080}"
+  #   ports:
+  #     - "${GO_SERVICE_PORT:-8080}:8080"
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
 
-  # ── rust-service (stub) ───────────────────────────────────────────────────
-  rust-service:
-    build:
-      context: ./services/rust-service
-      dockerfile: Dockerfile
-    image: ${RUST_SERVICE_IMAGE:-auto-agents/rust-service:local}
-    container_name: rust-service
-    restart: unless-stopped
-    environment:
-      RUST_SERVICE_PORT: "${RUST_SERVICE_PORT:-8081}"
-    ports:
-      - "${RUST_SERVICE_PORT:-8081}:8081"
+  # # ── rust-service (stub) ───────────────────────────────────────────────────
+  # rust-service:
+  #   build:
+  #     context: ./services/rust-service
+  #     dockerfile: Dockerfile
+  #   image: ${RUST_SERVICE_IMAGE:-auto-agents/rust-service:local}
+  #   container_name: rust-service
+  #   restart: unless-stopped
+  #   environment:
+  #     RUST_SERVICE_PORT: "${RUST_SERVICE_PORT:-8081}"
+  #   ports:
+  #     - "${RUST_SERVICE_PORT:-8081}:8081"
 
 volumes:
   openclaw-config:
