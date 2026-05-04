@@ -1,7 +1,6 @@
 # auto-agents — AI-agent monorepo
 
-A polyglot monorepo (TypeScript · Python · Go · Rust) that bundles three
-production-quality AI agents under a single `docker compose up`.
+A monorepo that bundles openclaw, pi and hermes agents in a docker compose stack.
 
 | Agent | Language | Source | Description |
 |-------|----------|--------|-------------|
