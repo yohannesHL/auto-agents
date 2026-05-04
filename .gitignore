@@ -1,0 +1,37 @@
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+
+# ── Node / TypeScript ─────────────────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.cache/
+*.tsbuildinfo
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.uv/
+
+# ── Go ────────────────────────────────────────────────────────────────────────
+services/go-service/go-service
+
+# ── Rust ──────────────────────────────────────────────────────────────────────
+services/rust-service/target/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Docker named-volume bind-mount directories (if overridden via *_DIR vars)
+.openclaw/
+.hermes/
+.pi/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/

@@ -1,0 +1,263 @@
+# auto-agents — polyglot monorepo docker-compose
+#
+# Agents
+#   openclaw   TypeScript / Node 24  — multi-channel personal AI gateway
+#   hermes     Python 3.13           — self-improving AI agent (Nous Research)
+#   pi         TypeScript / Node 22  — minimal terminal coding harness
+#
+# Stub services (extend or replace with real implementations)
+#   go-service   Go 1.23
+#   rust-service Rust 1.82
+#
+# Usage
+#   cp .env.example .env          # fill in your API keys
+#   docker compose up --build -d  # start everything
+#   docker compose logs -f        # tail all logs
+#
+# Tracking / telemetry is EXPLICITLY DISABLED for every service:
+#   openclaw  — all OTEL endpoints left blank; OPENCLAW_DISABLE_BONJOUR=1
+#   hermes    — no external telemetry; WANDB_API_KEY intentionally absent
+#   pi        — PI_TELEMETRY=0 suppresses the install-version ping to pi.dev
+#
+# See README.md for the full environment-variable reference.
+
+services:
+
+  # ── openclaw ──────────────────────────────────────────────────────────────
+  openclaw-gateway:
+    build:
+      context: ./agents/openclaw
+      dockerfile: Dockerfile
+    image: ${OPENCLAW_IMAGE:-auto-agents/openclaw:local}
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+
+      # ── Auth ──────────────────────────────────────────────────────────────
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+
+      # ── Service discovery ─────────────────────────────────────────────────
+      # Force Bonjour/mDNS off inside Docker (auto-disabled in containers,
+      # but explicitly set here to guarantee no mDNS broadcasts on LAN).
+      OPENCLAW_DISABLE_BONJOUR: "1"
+
+      # ── OpenTelemetry (OTEL) — all blank = NO telemetry exported ──────────
+      # openclaw only exports metrics/traces/logs when an OTLP endpoint is
+      # configured. Leaving every endpoint empty disables all export entirely.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ""
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ""
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ""
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: ""
+      OTEL_EXPORTER_OTLP_PROTOCOL: ""
+      OTEL_SERVICE_NAME: ""
+      OTEL_SEMCONV_STABILITY_OPT_IN: ""
+      OPENCLAW_OTEL_PRELOADED: ""
+
+      # ── Model provider keys (set in .env) ─────────────────────────────────
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+
+      # ── Channel tokens (set in .env) ──────────────────────────────────────
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+
+      # ── Claude web session (optional) ─────────────────────────────────────
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}
+
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-openclaw-config}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-openclaw-workspace}:/home/node/.openclaw/workspace
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+    init: true
+    command:
+      - "node"
+      - "dist/index.js"
+      - "gateway"
+      - "--bind"
+      - "${OPENCLAW_GATEWAY_BIND:-lan}"
+      - "--port"
+      - "18789"
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://127.0.0.1:18789/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  openclaw-cli:
+    image: ${OPENCLAW_IMAGE:-auto-agents/openclaw:local}
+    container_name: openclaw-cli
+    network_mode: "service:openclaw-gateway"
+    depends_on:
+      openclaw-gateway:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+      BROWSER: echo
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      OPENCLAW_DISABLE_BONJOUR: "1"
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-openclaw-config}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-openclaw-workspace}:/home/node/.openclaw/workspace
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: ["node", "dist/index.js"]
+
+  # ── hermes ────────────────────────────────────────────────────────────────
+  hermes-gateway:
+    build:
+      context: ./agents/hermes
+      dockerfile: Dockerfile
+    image: ${HERMES_IMAGE:-auto-agents/hermes:local}
+    container_name: hermes-gateway
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # ── Container user mapping ─────────────────────────────────────────────
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+
+      # ── Model provider keys (set in .env) ─────────────────────────────────
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+      # ── Channel tokens (set in .env) ──────────────────────────────────────
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+
+      # ── External analytics / experiment-tracking — DISABLED ───────────────
+      # WANDB_API_KEY is intentionally absent so no W&B tracking fires.
+      # The /api/analytics/* dashboard endpoints are local-only (SQLite) and
+      # never send data outside the container.
+
+    volumes:
+      - ${HERMES_DATA_DIR:-hermes-data}:/opt/data
+    ports:
+      - "${HERMES_DASHBOARD_PORT:-9119}:9119"
+    command: ["gateway", "run"]
+
+  hermes-dashboard:
+    image: ${HERMES_IMAGE:-auto-agents/hermes:local}
+    container_name: hermes-dashboard
+    restart: unless-stopped
+    depends_on:
+      - hermes-gateway
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HERMES_UID: ${HERMES_UID:-10000}
+      HERMES_GID: ${HERMES_GID:-10000}
+    volumes:
+      - ${HERMES_DATA_DIR:-hermes-data}:/opt/data
+    # Bind to localhost only — API keys are stored here; do not expose on LAN.
+    # For remote access use: ssh -L 9119:localhost:9119 your-host
+    command: ["dashboard", "--host", "127.0.0.1", "--port", "9119", "--no-open"]
+
+  # ── pi ────────────────────────────────────────────────────────────────────
+  pi:
+    build:
+      context: ./agents/pi
+      dockerfile: Dockerfile
+    image: ${PI_IMAGE:-auto-agents/pi:local}
+    container_name: pi
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # ── Install-version telemetry — DISABLED ──────────────────────────────
+      # pi phones home to https://pi.dev/api/report-install on a fresh install
+      # (anonymous version ping). PI_TELEMETRY=0 suppresses this permanently.
+      # Source: agents/pi/src/core/telemetry.ts
+      PI_TELEMETRY: "0"
+
+      # ── Model provider keys (set in .env) ─────────────────────────────────
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+    volumes:
+      - ${PI_DATA_DIR:-pi-data}:/home/pi/.pi
+    stdin_open: true
+    tty: true
+
+  # ── go-service (stub) ─────────────────────────────────────────────────────
+  go-service:
+    build:
+      context: ./services/go-service
+      dockerfile: Dockerfile
+    image: ${GO_SERVICE_IMAGE:-auto-agents/go-service:local}
+    container_name: go-service
+    restart: unless-stopped
+    environment:
+      GO_SERVICE_PORT: "${GO_SERVICE_PORT:-8080}"
+    ports:
+      - "${GO_SERVICE_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── rust-service (stub) ───────────────────────────────────────────────────
+  rust-service:
+    build:
+      context: ./services/rust-service
+      dockerfile: Dockerfile
+    image: ${RUST_SERVICE_IMAGE:-auto-agents/rust-service:local}
+    container_name: rust-service
+    restart: unless-stopped
+    environment:
+      RUST_SERVICE_PORT: "${RUST_SERVICE_PORT:-8081}"
+    ports:
+      - "${RUST_SERVICE_PORT:-8081}:8081"
+
+volumes:
+  openclaw-config:
+  openclaw-workspace:
+  hermes-data:
+  pi-data:
