@@ -7,9 +7,6 @@ A monorepo that bundles openclaw, pi and hermes agents in a docker compose stack
 | **openclaw** | TypeScript / Node 24 | [openclaw/openclaw](https://github.com/openclaw/openclaw) | Personal AI gateway — Telegram, Discord, Slack, WhatsApp, Signal & 20+ more channels |
 | **hermes** | Python 3.13 | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | Self-improving agent with skill creation, memory, and scheduled automations |
 | **pi** | TypeScript / Node 22 | [badlogic/pi-mono](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) | Minimal extensible terminal coding harness |
-| **go-service** | Go 1.23 | `services/go-service/` | Stub — replace with a real Go agent |
-| **rust-service** | Rust 1.82 | `services/rust-service/` | Stub — replace with a real Rust agent |
-
 ---
 
 ## Quick start
