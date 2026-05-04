@@ -1,4 +1,4 @@
-# auto-agents — polyglot AI-agent monorepo
+# auto-agents — AI-agent monorepo
 
 A polyglot monorepo (TypeScript · Python · Go · Rust) that bundles three
 production-quality AI agents under a single `docker compose up`.
