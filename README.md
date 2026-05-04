@@ -51,9 +51,6 @@ auto-agents/
 │   ├── hermes/            # git submodule → github.com/NousResearch/hermes-agent (Python)
 │   └── pi/                # TypeScript — pi coding-agent (pi-mono package)
 │       └── Dockerfile     # added by this monorepo
-├── services/
-│   ├── go-service/        # Go stub (extend as needed)
-│   └── rust-service/      # Rust stub (extend as needed)
 ├── .gitmodules            # submodule declarations for openclaw & hermes
 ├── docker-compose.yml     # root compose — all agents + stubs
 ├── .env.example           # all environment variables with defaults
@@ -250,22 +247,6 @@ Set at least one key to give the agents a working LLM backend.
 
 ---
 
-### go-service (stub)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GO_SERVICE_PORT` | `8080` | Host port for the Go service. |
-
----
-
-### rust-service (stub)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RUST_SERVICE_PORT` | `8081` | Host port for the Rust service. |
-
----
-
 ## Building individual images
 
 ```bash
@@ -278,11 +259,6 @@ docker build -t auto-agents/hermes:local ./agents/hermes
 # pi
 docker build -t auto-agents/pi:local ./agents/pi
 
-# go-service
-docker build -t auto-agents/go-service:local ./services/go-service
-
-# rust-service
-docker build -t auto-agents/rust-service:local ./services/rust-service
 ```
 
 ## Volumes
@@ -299,12 +275,6 @@ Named Docker volumes are created automatically when no host paths are set:
 To persist state on the host instead of in Docker volumes, set the
 corresponding `*_DIR` variables in `.env`.
 
-## Extending the Go / Rust stubs
-
-The stub services in `services/go-service/` and `services/rust-service/` are
-minimal HTTP servers.  Replace `main.go` / `src/main.rs` with your own agent
-implementation.  The `Dockerfile` in each directory builds a small, statically-
-linked binary image.
 
 ## License
 
