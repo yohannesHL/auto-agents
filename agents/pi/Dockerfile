@@ -20,6 +20,7 @@ COPY package.json ./
 
 # Install all dependencies (including devDependencies needed for the build)
 RUN npm install --prefer-offline --no-audit
+RUN npm install @typescript/native-preview --save-dev
 
 # Copy source code
 COPY . .
